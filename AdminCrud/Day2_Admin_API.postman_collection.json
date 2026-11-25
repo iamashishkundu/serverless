@@ -1,0 +1,228 @@
+{
+  "info": {
+    "_postman_id": "f7e8d9c0-b1a2-3456-7890-123456789abc",
+    "name": "Day-2 Admin CRUD API (7 Endpoints)",
+    "description": "Complete test collection for Day-2 Admin CRUD deployed via Serverless Framework. Uses Day2_Users table and day2-admin-service Lambda.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "adminBaseUrl",
+      "value": "https://YOUR_DAY2_ADMIN_API_ID.execute-api.us-east-1.amazonaws.com",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "targetUserId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Admin Login (POST /admin/auth/login)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test(\"Success is true\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "});",
+              "pm.collectionVariables.set(\"adminToken\", json.data.token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"day2admin@example.com\",\n  \"password\": \"Day2Admin@123\"\n}"
+        },
+        "url": { "raw": "{{adminBaseUrl}}/admin/auth/login", "host": ["{{adminBaseUrl}}"], "path": ["admin", "auth", "login"] }
+      }
+    },
+    {
+      "name": "2. List Users (GET /admin/users)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test(\"Users list returned\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.data.users).to.be.an(\"array\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+        "url": { "raw": "{{adminBaseUrl}}/admin/users?page=1&limit=10&search=", "host": ["{{adminBaseUrl}}"], "path": ["admin", "users"] }
+      }
+    },
+    {
+      "name": "3. Admin Creates User (POST /admin/users)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 201 Created\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test(\"Created user returned\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.data.id).to.be.a(\"string\");",
+              "});",
+              "pm.collectionVariables.set(\"targetUserId\", json.data.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Created By Admin\",\n  \"email\": \"createdbyadmin@example.com\",\n  \"password\": \"AdminCreated@123\",\n  \"phone\": \"+1-555-8888\"\n}"
+        },
+        "url": { "raw": "{{adminBaseUrl}}/admin/users", "host": ["{{adminBaseUrl}}"], "path": ["admin", "users"] }
+      }
+    },
+    {
+      "name": "4. Get Single User (GET /admin/users/:id)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test(\"User retrieved\", function () {",
+              "    pm.expect(json.success).to.be.true;",
+              "    pm.expect(json.data.id).to.eql(pm.collectionVariables.get(\"targetUserId\"));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+        "url": { "raw": "{{adminBaseUrl}}/admin/users/{{targetUserId}}", "host": ["{{adminBaseUrl}}"], "path": ["admin", "users", "{{targetUserId}}"] }
+      }
+    },
+    {
+      "name": "5. Update User (PATCH /admin/users/:id)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test(\"Name updated\", function () {",
+              "    pm.expect(json.data.name).to.eql(\"Updated Admin Subject\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Updated Admin Subject\"\n}"
+        },
+        "url": { "raw": "{{adminBaseUrl}}/admin/users/{{targetUserId}}", "host": ["{{adminBaseUrl}}"], "path": ["admin", "users", "{{targetUserId}}"] }
+      }
+    },
+    {
+      "name": "6. Block User (PATCH /admin/users/:id/status)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.test(\"Status is blocked\", function () {",
+              "    pm.expect(json.data.status).to.eql(\"blocked\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"blocked\"\n}"
+        },
+        "url": { "raw": "{{adminBaseUrl}}/admin/users/{{targetUserId}}/status", "host": ["{{adminBaseUrl}}"], "path": ["admin", "users", "{{targetUserId}}", "status"] }
+      }
+    },
+    {
+      "name": "7. Soft Delete User (DELETE /admin/users/:id)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+        "url": { "raw": "{{adminBaseUrl}}/admin/users/{{targetUserId}}", "host": ["{{adminBaseUrl}}"], "path": ["admin", "users", "{{targetUserId}}"] }
+      }
+    }
+  ]
+}

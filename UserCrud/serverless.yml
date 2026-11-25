@@ -1,0 +1,107 @@
+service: day2-serverless-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  httpApi:
+    cors: true
+  environment:
+    USERS_TABLE: Day2_Users
+    JWT_SECRET: ${env:JWT_SECRET, 'day2_supersecret_jwt_key_2026'}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Scan
+            - dynamodb:Query
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - !GetAtt UsersTable.Arn
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!**/*.zip'
+    - '!*.json'
+    - 'package.json'
+    - '!*.md'
+    - '!bcryptjs-layer/**'
+    - '!jsonwebtoken-layer/**'
+
+# =============================================================
+# Lambda Layers (day2-*)
+# =============================================================
+layers:
+  Day2Bcryptjs:
+    name: day2-bcryptjs-layer
+    path: bcryptjs-layer
+    description: "Day-2 bcryptjs library layer for password hashing"
+    compatibleRuntimes:
+      - nodejs20.x
+
+  Day2Jsonwebtoken:
+    name: day2-jsonwebtoken-layer
+    path: jsonwebtoken-layer
+    description: "Day-2 jsonwebtoken library layer for JWT authentication"
+    compatibleRuntimes:
+      - nodejs20.x
+
+# =============================================================
+# Lambda Functions (ONLY User CRUD - 6 Endpoints)
+# =============================================================
+functions:
+  userCrud:
+    name: day2-user-service
+    handler: index.handler
+    package:
+      patterns:
+        - 'index.mjs'
+        - 'package.json'
+        - 'src/**'
+    layers:
+      - !Ref Day2BcryptjsLambdaLayer
+      - !Ref Day2JsonwebtokenLambdaLayer
+    events:
+      - httpApi:
+          path: /auth/register
+          method: post
+      - httpApi:
+          path: /auth/login
+          method: post
+      - httpApi:
+          path: /users/me
+          method: get
+      - httpApi:
+          path: /users/me
+          method: patch
+      - httpApi:
+          path: /users/me/change-password
+          method: patch
+      - httpApi:
+          path: /users/me
+          method: delete
+
+# =============================================================
+# Infrastructure Resources (Day2_Users)
+# =============================================================
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Day2_Users
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH

@@ -1,0 +1,98 @@
+service: day2-admin-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  httpApi:
+    cors: true
+  environment:
+    USERS_TABLE: Day2_Users
+    JWT_SECRET: ${env:JWT_SECRET, 'day2_supersecret_jwt_key_2026'}
+    ADMIN_EMAIL: ${env:ADMIN_EMAIL, 'day2admin@example.com'}
+    ADMIN_PASSWORD: ${env:ADMIN_PASSWORD, 'Day2Admin@123'}
+    ADMIN_NAME: ${env:ADMIN_NAME, 'Day-2 Administrator'}
+    ADMIN_DEPARTMENT: ${env:ADMIN_DEPARTMENT, 'Cloud & DevOps Engineering'}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Scan
+            - dynamodb:Query
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Day2_Users"
+            - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Day2_Users/*"
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!**/*.zip'
+    - '!*.json'
+    - 'package.json'
+    - '!*.md'
+    - '!bcryptjs-layer/**'
+    - '!jsonwebtoken-layer/**'
+
+# =============================================================
+# Lambda Layers (day2-admin-*)
+# =============================================================
+layers:
+  Day2AdminBcryptjs:
+    name: day2-admin-bcryptjs-layer
+    path: bcryptjs-layer
+    description: "Day-2 Admin bcryptjs library layer for password hashing"
+    compatibleRuntimes:
+      - nodejs20.x
+
+  Day2AdminJsonwebtoken:
+    name: day2-admin-jsonwebtoken-layer
+    path: jsonwebtoken-layer
+    description: "Day-2 Admin jsonwebtoken library layer for JWT authentication"
+    compatibleRuntimes:
+      - nodejs20.x
+
+# =============================================================
+# Lambda Functions (ONLY Admin CRUD - 7 Endpoints)
+# =============================================================
+functions:
+  adminCrud:
+    name: day2-admin-service
+    handler: index.handler
+    package:
+      patterns:
+        - 'index.mjs'
+        - 'package.json'
+        - 'src/**'
+    layers:
+      - !Ref Day2AdminBcryptjsLambdaLayer
+      - !Ref Day2AdminJsonwebtokenLambdaLayer
+    events:
+      - httpApi:
+          path: /admin/auth/login
+          method: post
+      - httpApi:
+          path: /admin/users
+          method: get
+      - httpApi:
+          path: /admin/users/{id}
+          method: get
+      - httpApi:
+          path: /admin/users
+          method: post
+      - httpApi:
+          path: /admin/users/{id}
+          method: patch
+      - httpApi:
+          path: /admin/users/{id}/status
+          method: patch
+      - httpApi:
+          path: /admin/users/{id}
+          method: delete
